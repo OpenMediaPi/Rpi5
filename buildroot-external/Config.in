@@ -1,0 +1,5 @@
+menu "RPI5 Kodi OTA external options"
+
+comment "No extra external packages selected by default"
+
+endmenu

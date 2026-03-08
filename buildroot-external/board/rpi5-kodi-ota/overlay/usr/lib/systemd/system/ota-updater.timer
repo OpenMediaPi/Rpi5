@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodic OTA update check
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=30min
+Persistent=true
+Unit=ota-updater.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Check and install OTA updates from Jenkins artifacts
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/ota-updater.sh
+
+[Install]
+WantedBy=multi-user.target
