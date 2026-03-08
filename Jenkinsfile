@@ -10,6 +10,7 @@ pipeline {
     string(name: 'BUILDROOT_DIR', defaultValue: 'buildroot', description: 'Buildroot checkout directory')
     string(name: 'OUT_DIR', defaultValue: 'output/rpi5_kodi_ota', description: 'Build output directory')
     string(name: 'JOBS', defaultValue: '8', description: 'Parallel make jobs')
+    booleanParam(name: 'AUTO_INSTALL_BUILD_DEPS', defaultValue: true, description: 'Attempt to install missing host build tools on agent')
     booleanParam(name: 'MAKE_OTA_BUNDLE', defaultValue: false, description: 'Build RAUC bundle after image build')
     string(name: 'RAUC_CERT_CRED_ID', defaultValue: 'rauc-cert-pem', description: 'Jenkins Secret file credential ID for RAUC cert PEM')
     string(name: 'RAUC_KEY_CRED_ID', defaultValue: 'rauc-key-pem', description: 'Jenkins Secret file credential ID for RAUC key PEM')
@@ -29,19 +30,37 @@ pipeline {
 
     stage('Init Buildroot') {
       steps {
-        sh '''
+        script {
+          if (params.AUTO_INSTALL_BUILD_DEPS) {
+            sh '''
+              set -eux
+              if [ "$(id -u)" -eq 0 ]; then
+                ./scripts/ensure-build-deps.sh
+              else
+                if command -v sudo >/dev/null 2>&1; then
+                  sudo ./scripts/ensure-build-deps.sh
+                else
+                  echo "AUTO_INSTALL_BUILD_DEPS is true, but agent is non-root and sudo is missing." >&2
+                  echo "Install build deps on the node manually or run agent as root." >&2
+                  exit 1
+                fi
+              fi
+            '''
+          }
+        }
+        sh """
           set -eux
-          ./scripts/init-buildroot.sh "${BUILDROOT_DIR}"
-        '''
+          ./scripts/init-buildroot.sh "${params.BUILDROOT_DIR}"
+        """
       }
     }
 
     stage('Build Image') {
       steps {
-        sh '''
+        sh """
           set -eux
-          ./scripts/build.sh "${BUILDROOT_DIR}" "${OUT_DIR}"
-        '''
+          ./scripts/build.sh "${params.BUILDROOT_DIR}" "${params.OUT_DIR}"
+        """
       }
     }
 
@@ -58,22 +77,22 @@ pipeline {
           file(credentialsId: "${params.RAUC_CERT_CRED_ID}", variable: 'RAUC_CERT_FILE'),
           file(credentialsId: "${params.RAUC_KEY_CRED_ID}", variable: 'RAUC_KEY_FILE')
         ]) {
-          sh '''
+          sh """
             set -eux
-            ./scripts/mk-ota-bundle.sh "${OUT_DIR}" "${RAUC_CERT_FILE}" "${RAUC_KEY_FILE}"
+            ./scripts/mk-ota-bundle.sh "${params.OUT_DIR}" "${RAUC_CERT_FILE}" "${RAUC_KEY_FILE}"
 
             SHORT_COMMIT="$(printf '%s' "${GIT_COMMIT:-unknown}" | cut -c1-8)"
             OTA_VERSION="${BUILD_NUMBER}-${SHORT_COMMIT}"
             VERSIONED_BUNDLE="update-${OTA_VERSION}.raucb"
-            cp "${OUT_DIR}/images/update.raucb" "${OUT_DIR}/images/${VERSIONED_BUNDLE}"
+            cp "${params.OUT_DIR}/images/update.raucb" "${params.OUT_DIR}/images/${VERSIONED_BUNDLE}"
 
-            SHA256="$(sha256sum "${OUT_DIR}/images/${VERSIONED_BUNDLE}" | awk '{print $1}')"
-            cat > "${OUT_DIR}/images/latest.manifest" <<MANIFEST
+            SHA256="$(sha256sum "${params.OUT_DIR}/images/${VERSIONED_BUNDLE}" | awk '{print $1}')"
+            cat > "${params.OUT_DIR}/images/latest.manifest" <<MANIFEST
 VERSION=${OTA_VERSION}
 BUNDLE_URL=${ARTIFACT_BASE_URL}/${VERSIONED_BUNDLE}
 SHA256=${SHA256}
 MANIFEST
-          '''
+          """
         }
       }
     }

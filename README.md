@@ -15,6 +15,7 @@ It is a starting point, not a production-finished distro.
 - `scripts/init-buildroot.sh`: clone Buildroot (default: `2025.02`)
 - `scripts/build.sh`: build image
 - `scripts/mk-ota-bundle.sh`: create signed RAUC bundle from built rootfs
+- `scripts/ensure-build-deps.sh`: install host dependencies on CI agent (best effort)
 - `Jenkinsfile`: CI pipeline for Jenkins
 
 ## Quick Start
@@ -96,6 +97,7 @@ This repo includes a ready `Jenkinsfile`.
    - `MAKE_OTA_BUNDLE=true` to also build `update.raucb`
    - `BUILDROOT_VERSION` to pin another Buildroot tag/branch
    - `JOBS` to match your Jenkins agent CPU
+   - `AUTO_INSTALL_BUILD_DEPS=true` to auto-install missing tools like `make`
 3. If OTA bundle is enabled, create Jenkins **Secret file** credentials:
    - cert PEM credential ID (default: `rauc-cert-pem`)
    - key PEM credential ID (default: `rauc-key-pem`)
