@@ -10,6 +10,7 @@ pipeline {
     string(name: 'BUILDROOT_DIR', defaultValue: 'buildroot', description: 'Buildroot checkout directory')
     string(name: 'OUT_DIR', defaultValue: 'output/rpi5_kodi_ota', description: 'Build output directory')
     string(name: 'JOBS', defaultValue: '8', description: 'Parallel make jobs')
+    booleanParam(name: 'CLEAN_OUTPUT', defaultValue: true, description: 'Delete output directory before configuring/building')
     booleanParam(name: 'AUTO_INSTALL_BUILD_DEPS', defaultValue: true, description: 'Attempt to install missing host build tools on agent')
     booleanParam(name: 'MAKE_OTA_BUNDLE', defaultValue: false, description: 'Build RAUC bundle after image build')
     string(name: 'RAUC_CERT_CRED_ID', defaultValue: 'rauc-cert-pem', description: 'Jenkins Secret file credential ID for RAUC cert PEM')
@@ -61,7 +62,8 @@ pipeline {
       steps {
         withEnv([
           "BUILDROOT_DIR=${params.BUILDROOT_DIR}",
-          "OUT_DIR=${params.OUT_DIR}"
+          "OUT_DIR=${params.OUT_DIR}",
+          "CLEAN_OUTPUT=${params.CLEAN_OUTPUT}"
         ]) {
           sh '''
             set -eux

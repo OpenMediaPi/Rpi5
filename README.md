@@ -97,6 +97,7 @@ This repo includes a ready `Jenkinsfile`.
    - `MAKE_OTA_BUNDLE=true` to also build `update.raucb`
    - `BUILDROOT_VERSION` to pin another Buildroot tag/branch
    - `JOBS` to match your Jenkins agent CPU
+   - `CLEAN_OUTPUT=true` to avoid stale/legacy Buildroot `.config` issues
    - `AUTO_INSTALL_BUILD_DEPS=true` to auto-install missing tools like `make`
 3. If OTA bundle is enabled, create Jenkins **Secret file** credentials:
    - cert PEM credential ID (default: `rauc-cert-pem`)
