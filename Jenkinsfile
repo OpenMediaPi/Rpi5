@@ -48,19 +48,26 @@ pipeline {
             '''
           }
         }
-        sh """
-          set -eux
-          ./scripts/init-buildroot.sh "${params.BUILDROOT_DIR}"
-        """
+        withEnv(["BUILDROOT_DIR=${params.BUILDROOT_DIR}"]) {
+          sh '''
+            set -eux
+            ./scripts/init-buildroot.sh "${BUILDROOT_DIR}"
+          '''
+        }
       }
     }
 
     stage('Build Image') {
       steps {
-        sh """
-          set -eux
-          ./scripts/build.sh "${params.BUILDROOT_DIR}" "${params.OUT_DIR}"
-        """
+        withEnv([
+          "BUILDROOT_DIR=${params.BUILDROOT_DIR}",
+          "OUT_DIR=${params.OUT_DIR}"
+        ]) {
+          sh '''
+            set -eux
+            ./scripts/build.sh "${BUILDROOT_DIR}" "${OUT_DIR}"
+          '''
+        }
       }
     }
 
@@ -77,22 +84,24 @@ pipeline {
           file(credentialsId: "${params.RAUC_CERT_CRED_ID}", variable: 'RAUC_CERT_FILE'),
           file(credentialsId: "${params.RAUC_KEY_CRED_ID}", variable: 'RAUC_KEY_FILE')
         ]) {
-          sh """
-            set -eux
-            ./scripts/mk-ota-bundle.sh "${params.OUT_DIR}" "${RAUC_CERT_FILE}" "${RAUC_KEY_FILE}"
+          withEnv(["OUT_DIR=${params.OUT_DIR}"]) {
+            sh '''
+              set -eux
+              ./scripts/mk-ota-bundle.sh "${OUT_DIR}" "${RAUC_CERT_FILE}" "${RAUC_KEY_FILE}"
 
-            SHORT_COMMIT="$(printf '%s' "${GIT_COMMIT:-unknown}" | cut -c1-8)"
-            OTA_VERSION="${BUILD_NUMBER}-${SHORT_COMMIT}"
-            VERSIONED_BUNDLE="update-${OTA_VERSION}.raucb"
-            cp "${params.OUT_DIR}/images/update.raucb" "${params.OUT_DIR}/images/${VERSIONED_BUNDLE}"
+              SHORT_COMMIT="$(printf '%s' "${GIT_COMMIT:-unknown}" | cut -c1-8)"
+              OTA_VERSION="${BUILD_NUMBER}-${SHORT_COMMIT}"
+              VERSIONED_BUNDLE="update-${OTA_VERSION}.raucb"
+              cp "${OUT_DIR}/images/update.raucb" "${OUT_DIR}/images/${VERSIONED_BUNDLE}"
 
-            SHA256="$(sha256sum "${params.OUT_DIR}/images/${VERSIONED_BUNDLE}" | awk '{print $1}')"
-            cat > "${params.OUT_DIR}/images/latest.manifest" <<MANIFEST
+              SHA256="$(sha256sum "${OUT_DIR}/images/${VERSIONED_BUNDLE}" | awk '{print $1}')"
+              cat > "${OUT_DIR}/images/latest.manifest" <<MANIFEST
 VERSION=${OTA_VERSION}
 BUNDLE_URL=${ARTIFACT_BASE_URL}/${VERSIONED_BUNDLE}
 SHA256=${SHA256}
 MANIFEST
-          """
+            '''
+          }
         }
       }
     }
